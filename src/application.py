@@ -1,13 +1,15 @@
-from classes.user import User
-from classes.activity import Hobbie,Task
+from models.user import User
+from models.activity import Hobbie,Task
 from methods.fileMethods import *
 
 #τεστ ότι δουλεύουν οι κλάσεις και οι συναρτήσεις
 def app():
-    user1 = User("Amalia", "std170663@ac.eap.gr", "pass123$", 8, 8)
+    user1=User(name="Amalia", email="std170663@ac.eap.gr", password="pass123$", role="admin", our_spend_activities=[8], our_spend_hobbies=[8])
     print(user1)
+    #user1 = User("Amalia", "std170663@ac.eap.gr", "pass123$", role:adim, our_spend_hobbies:8,)
+    #print(user1)
 
-    hobbie1 = Hobbie(30, 5, "tennis")
+    hobbie1 = Hobbie(2, 5, "tennis")
     print(hobbie1)
 
     hobbie1.edit_time(5)
@@ -40,10 +42,11 @@ def main():
                 name = input("Όνομα: ")
                 email = input("email: ")
                 password = input("password: ")
+                role = input("role: ")
                 our_spend_activities = input("Εκτιμώμενος χρόνος υποχρεώσεων σε ώρες: ")
                 our_spend_hobbies = input("Εκτιμώμενος χρόνος δραστηριοτήτων σε ώρες: ")
                 # προσθήκη νέου χρήστη στήν λίστα.
-                users.append(User(name, email, password, our_spend_activities, our_spend_hobbies))
+                users.append(User(name, email, password, role, our_spend_activities, our_spend_hobbies))
                 print("Συγχαρητήρια!\nΝέος χρήστης προστέθηκε με επιτυχία")
             elif sign_in_choice == 'b':
                 print("--Διαθέσιμοι χρήστες--\n")
