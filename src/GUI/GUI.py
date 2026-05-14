@@ -5,9 +5,9 @@ from tkinter import ttk
 
 class Graphics():
     def __int__(self, master):
-        frame = Frame(master)
-        frame.pack()
-        self.
+        #frame = Frame(master)
+        #frame.pack()
+        self.master
 
 window = tk.Tk() #φτιάχνω παράθυρο
 window.title("Project53 (Διαχείριση Χρόνου)") #τίτλος παραθύρου πάνω αριστερά
