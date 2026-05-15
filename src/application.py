@@ -6,8 +6,6 @@ from methods.fileMethods import *
 def app():
     user1=User(name="Amalia", email="std170663@ac.eap.gr", password="pass123$", role="admin", our_spend_activities=[8], our_spend_hobbies=[8])
     print(user1)
-    #user1 = User("Amalia", "std170663@ac.eap.gr", "pass123$", role:adim, our_spend_hobbies:8,)
-    #print(user1)
 
     hobbie1 = Hobbie(2, 5, "tennis")
     print(hobbie1)
