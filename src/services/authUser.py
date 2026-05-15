@@ -1,4 +1,4 @@
-from models.user import User
+from models.user import *
 
 #Η συνάρτηση "find_user" αυτή ψάχνει έναν χρήστη με βάση το email του.
 #Αν το βρει επιστρέφει το αντικείμενο User
