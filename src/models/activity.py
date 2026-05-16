@@ -19,8 +19,6 @@ class Activity:
     def edit_name(self, new_name):
         self.name = new_name
 
-  #  def array_task_list(self, name):
-
 class Hobbie(Activity):
     def __init__(self, time, priority, name):
         super().__init__(time, priority, name)
