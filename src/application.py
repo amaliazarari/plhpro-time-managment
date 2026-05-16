@@ -24,13 +24,12 @@ def main():
     # Η τοπική λίστα που θα κρατάει τα δεδομένα μας κατά την εκτέλεση
     read_log_file = 'usersDB.txt'
     users = read_users(read_log_file)
-    print(users)
-
 
     while True:
         print("\n=== MENOY ΔΙΑΧΕΙΡΙΣΗΣ ΧΡΟΝΟΥ ===")
-        print("1. Εισαγωγή Δεδομένων")
-        print("2. Exit")
+        print("1. Σύνδεση")
+        print("2. Προβολή χρηστών")
+        print("3. Exit")
 
         choice = input("Επιλογή: ")
 
@@ -46,15 +45,29 @@ def main():
                 # προσθήκη νέου χρήστη στήν λίστα.
                 users.append(User(name, email, password, role, our_spend_activities, our_spend_hobbies))
                 print("Συγχαρητήρια!\nΝέος χρήστης προστέθηκε με επιτυχία")
+                write_users("usersDB.txt", users)
+
             elif sign_in_choice == 'b':
-                print("--Διαθέσιμοι χρήστες--\n")
                 email = input("email: ")
                 password = input("password: ")
                 print("Συνδεθήκατε")
+
             else:
                 print("Ops!\nΠληκτρολόγησες δεδομένα :( \nΞαναπροσπάθησε")
 
         elif choice == '2':
+            view_user_choice = input("a. Για προβολή χρηστών: \nb. Για πλήθος χρηστών:\n")
+            if view_user_choice == 'a':
+                print("--Διαθέσιμοι χρήστες--\n")
+                for user in users:
+                    print(f"{user.name} {user.role}")
+                    # print(user.name + " " + user.role) Κάνει το ίδιο με το πάνω
+            elif view_user_choice == 'b':
+                print(f"{len(users)} καταγεγραμμένοι χρήστες")
+            else:
+                print("Ops!\nΠληκτρολόγησες δεδομένα :( \nΞαναπροσπάθησε")
+
+        elif choice == '3':
             write_users("usersDB.txt", users)
             print("Έξοδος...")
             break
