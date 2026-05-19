@@ -1,79 +1,222 @@
 from models.user import User
 from models.activity import Hobbie,Task
 from methods.fileMethods import *
-
-#τεστ ότι δουλεύουν οι κλάσεις και οι συναρτήσεις
-def app():
-    user1=User(name="Amalia", email="std170663@ac.eap.gr", password="pass123$", role="admin", our_spend_activities=[8], our_spend_hobbies=[8])
-    print(user1)
-
-    hobbie1 = Hobbie(2, 5, "tennis")
-    print(hobbie1)
-
-    hobbie1.edit_time(5)
-    print(hobbie1)
-
-    task1 = Task(5, 9, "job")
-    print(task1)
-
-    task1.edit_priority(7)
-    print(task1)
+from services.authUser import (find_user, create_user, authenticate_user, delete_user, admin_exists)
+from services.activityService import (add_activity, remove_activity, edit_activity, list_activities)
 
 # --- Κύριο Μενού ---
 def main():
     # Η τοπική λίστα που θα κρατάει τα δεδομένα μας κατά την εκτέλεση
+    role_choice=0
     read_log_file = 'usersDB.txt'
     users = read_users(read_log_file)
+    print("Users loaded: ", users)
+
 
     while True:
         print("\n=== MENOY ΔΙΑΧΕΙΡΙΣΗΣ ΧΡΟΝΟΥ ===")
-        print("1. Σύνδεση")
-        print("2. Προβολή χρηστών")
+        print("1. Διαχερείριση Χρηστών")
+        print("2. Εκτύπωση Δεδομένων")
         print("3. Exit")
 
         choice = input("Επιλογή: ")
 
         if choice == '1':
-            sign_in_choice = input("a. Για εισαγωγή νέων χρηστών: \nb. Σύνδεση χρήστη:\n")
+            sign_in_choice = input("a. Για εισαγωγή νέων χρηστών: \nb. Σύνδεση χρήστη: \nc. Διαγραφή χρήστη: \n")
             if sign_in_choice == 'a':
                 name = input("Όνομα: ")
                 email = input("email: ")
-                password = input("password: ")
-                role = input("role: ")
-                our_spend_activities = input("Εκτιμώμενος χρόνος υποχρεώσεων σε ώρες: ")
-                our_spend_hobbies = input("Εκτιμώμενος χρόνος δραστηριοτήτων σε ώρες: ")
-                # προσθήκη νέου χρήστη στήν λίστα.
-                users.append(User(name, email, password, role, our_spend_activities, our_spend_hobbies))
-                print("Συγχαρητήρια!\nΝέος χρήστης προστέθηκε με επιτυχία")
-                write_users("usersDB.txt", users)
 
+                #Έλεγχος αν το email που πληκτρολογήθηκε είναι μοναδικό
+                while find_user(users, email) is not None:
+                    print("Το email χρησιμοποιείται ήδη!! ")
+                    email = input("Δώσε άλλο email: ")
+
+                password = input("password: ")
+
+                """Ελέγχουμε αν υπάρχει ήδη χρήστης ή οχι. Αν δεν υπάρχει χρήστης, ο πρώτος δηλαδή που θα κάνει 
+                   εγγραφή θα έχει και την επιλογή admin και την επιλογή user. Εάν υπάρχει ήδη χρήστης admin τότε δεν
+                   θα μπορούμε να ξαναδηλώσουμε admin θα μπορούμε να δηλώνουμε μόνο users"""
+                print("1.Admin")
+                print("2.User")
+                role_choice = input("Επιλογή Ρόλου: ")
+
+                #Επιλογή ρόλου
+                while role_choice == '1' and admin_exists(users):
+                    print("Αδυναμία δημιουργίας 2ου admin")
+                    role_choice = input("Δώσε νέο ρόλο (1.Admin/2.User): ")
+
+                if role_choice == '1':
+                    role = "admin"
+                    print("Ο νέος χρήστης δημιουργήθηκε ως admin")
+
+                if role_choice == '2':
+                    role = "user"
+                    print("Ο νέος χρήστης δημιουργήθηκε ως user")
+
+
+                #our_spend_activities = input("Εκτιμώμενος χρόνος υποχρεώσεων σε ώρες: ")
+                #our_spend_hobbies = input("Εκτιμώμενος χρόνος δραστηριοτήτων σε ώρες: ")
+
+                # προσθήκη νέου χρήστη στήν λίστα.
+                new_user = create_user(users, name, email, password, role)
+
+
+                if new_user is None:
+                    print("Το email χρησιμοποιείται ήδη")
+                else:
+                    write_users("usersDB.txt", users)
+                    print("Συγχαρητήρια!\nΝέος χρήστης προστέθηκε με επιτυχία")
             elif sign_in_choice == 'b':
+                print("--Διαθέσιμοι χρήστες--\n")
                 email = input("email: ")
                 password = input("password: ")
-                print("Συνδεθήκατε")
 
+                #Έλεγχος εισόδου χρήστη
+                current_user = authenticate_user(users, email, password)
+
+                if current_user is None:
+                    print("Λάθος email ή password")
+                else:
+                    print(f"Καλώς ήρθες {current_user.name}")
+
+                    #Έλεγχος για admin ή user
+                    if current_user.role == "admin":
+                        print("ADMIN MENU")
+                    else:
+                        print("USER MENU")
+
+                    print("Συνδεθήκατε")
+                    user_menu(current_user, users)
+
+            elif sign_in_choice == 'c':
+                print("Διαδικασία Διαγραφής Χρήστη:")
             else:
                 print("Ops!\nΠληκτρολόγησες δεδομένα :( \nΞαναπροσπάθησε")
 
-        elif choice == '2':
-            view_user_choice = input("a. Για προβολή χρηστών: \nb. Για πλήθος χρηστών:\n")
-            if view_user_choice == 'a':
-                print("--Διαθέσιμοι χρήστες--\n")
-                for user in users:
-                    print(f"{user.name} {user.role}")
-                    # print(user.name + " " + user.role) Κάνει το ίδιο με το πάνω
-            elif view_user_choice == 'b':
-                print(f"{len(users)} καταγεγραμμένοι χρήστες")
-            else:
-                print("Ops!\nΠληκτρολόγησες δεδομένα :( \nΞαναπροσπάθησε")
+        elif    choice == '2':
+            print("\n ---Αποθηκευμένοι Χρήστες---")
+            for user in users:
+                print(user)
 
         elif choice == '3':
-            write_users("usersDB.txt", users)
+            #write_users("usersDB.txt", users)
             print("Έξοδος...")
             break
         else:
             print("Λάθος επιλογή, προσπαθήστε ξανά.")
 
+
+def user_menu(current_user, users):
+
+    type_choice=0
+    while True:
+        print(f"\n=== ΜΕΝΟΥ ΧΡΗΣΤΗ{current_user.name} ===")
+        print("1.Προσθήκη δραστηριότητας")
+        print("2. Διαγραφή δραστηριότητας")
+        print("3. Επεξεργασία δραστηριοτήτων")
+        print("4. Εμφάνιση δραστηριοτήτων")
+        print("5. Αποσύνδεση")
+
+        choice = input("Επιλογή: ")
+
+        #Προσθήκη δραστηριότητας
+        if choice == '1':
+            print("\n-- Προσθήκη Δραστηριότητας --")
+            print("1. Υποχρέωση(Task)")
+            print("2. Δραστηριότητας (Hobbie)")
+            type_choice=input("Επιλογή τύπου: ")
+
+            if type_choice == '1':
+                acticity_type = "task"
+            elif type_choice == '2':
+                acticity_type = "hobbie"
+            else:
+                print("Λάθος Επιλογή!!")
+
+                continue
+
+            name= input("'Ονομα δραστηριότητας: ")
+            time = float(input("Διαθέσιμος χρόνος: "))
+            priority=int(input("Προτεραιότητα (1-10): "))
+            result=add_activity(current_user, acticity_type, name, time, priority)
+
+            if result:
+                write_users("usersDB.txt", users)
+                print(f"H δραστηριότητα '{name}' προστέθηκε επιτυχώς!")
+            else:
+                print("Λάθος τύπος δραστηριότητας")
+
+
+        #Διαγραφή δραστηριότητας
+        elif choice == '2':
+            print("--Διαγραφή Δραστηριότητας--")
+            print("1. Υποχρέωση (Task)")
+            print("2. Δραστηρίοτητα (Hobbie)")
+            type_choice=input("Επιλογή τύπου:")
+
+            if type_choice == '1':
+                acticity_type = 'task'
+            elif type_choice == '2':
+                acticity_type = 'hobbie'
+            else:
+                print("Λάθος επιλογή.")
+                continue
+
+            name=input("Όνομα δραστηριότητας προς διαγραφή: ")
+            result=remove_activity(current_user, acticity_type, name)
+
+            if result:
+                write_users("usersDB.txt", users)
+                print(f"Η δραστηριότητα '{name}' διαγράφηκε επιτυχώς!")
+            else:
+                print(f"Δεν διαγράφηκε δραστηριότητα με όνομα '{name}'.")
+
+        #Επεξεργασία δραστηριότητας
+        elif choice == '3':
+            print("\n-- Επεξεργασία Δραστηριότητας --")
+            print("1. Υποχρέωση (Task)")
+            print("2. Δραστηριότητα (Hobbie)")
+            type_choice=input("Επιλογή τύπου: ")
+
+            if type_choice == '1':
+                acticity_type = "task"
+            elif type_choice == '2':
+                acticity_type = "hobbie"
+            else:
+                print("Λάθος επιλογή.")
+                continue
+
+            name=input("Όνομα δραστηριότητας προς επεξεργασία: ")
+            print("(Πάτα Enter αν δεν θέλεις να αλλάξεις κάτι)")
+            new_name=input("Νέο όνομα: ") or None
+            new_time=input("Νέες ώρες: ") or None
+            new_priority=input("Νέα προτεραιότητα: ") or None
+
+            if new_time is not None:
+                new_time=float(new_time)
+            if new_priority is not None:
+                new_priority=int(new_priority)
+
+            result=edit_activity(current_user, acticity_type, new_name, new_time, new_priority)
+
+            if result:
+                write_users("usersDB.txt", users)
+                print(f"Η δραστηριότητα '{name}' ενημερώθηκε επιτυχώς!")
+            else:
+                print(f"Δεν βρέθηκε δραστηριότητα με όνομα '{name}'.")
+
+        #Εμφάνιση δραστηριοτήτων
+        elif choice == '4':
+            list_activities(current_user)
+
+        #Αποσύνδεση
+        elif choice == '5':
+            print(f"Αποσύνδεση χρήστη {current_user.name}. Αντίο!!!")
+            break
+        else:
+            print("Λάθος επιλογή, προσπάθησε ξανά.")
+
+
 if __name__ == "__main__":
-    app() #τεστ ότι δουλεύουν οι κλάσεις και οι συναρτήσεις
     main() # --- Κύριο Μενού ---
