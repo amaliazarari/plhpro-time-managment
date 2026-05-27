@@ -78,15 +78,19 @@ def list_activities(user):
     if not user.tasks:
         print("Δεν υπάρχουν υποχρεώσεις")
     else:
-        for i, task in enumerate(user.tasks, 1):
-            print(f"{i}. {task.name}")
+        i=1
+        for task in user.tasks:
+            print(f"{i}. {task}")
+            i += 1
 
     print(f"\n--- Δραστηριότητες (Hobbies) του {user.name} ---")
     if not user.hobbies:
         print("Δεν υπάρχουν δραστηριότητες.")
     else:
-        for i, hobbie in enumerate(user.hobbies, 1):
+        i=1
+        for hobbie in user.hobbies:
             print(f"{i}. {hobbie}")
+            i += 1
 
 
     #Σύνολο ωρών
