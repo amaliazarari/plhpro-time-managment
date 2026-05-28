@@ -1,5 +1,3 @@
-from models.user import User
-from models.activity import Hobbie,Task
 from methods.fileMethods import *
 from services.authUser import (find_user, create_user, authenticate_user, delete_user, admin_exists)
 from services.activityService import (add_activity, remove_activity, edit_activity, list_activities)
@@ -54,9 +52,8 @@ def main():
                     role = "user"
                     print("Ο νέος χρήστης δημιουργήθηκε ως user")
 
-
-                #our_spend_activities = input("Εκτιμώμενος χρόνος υποχρεώσεων σε ώρες: ")
-                #our_spend_hobbies = input("Εκτιμώμενος χρόνος δραστηριοτήτων σε ώρες: ")
+                """Οι παρακάτω 2 γραμμές αφαιρέθηκαν για τις δοκιμές, αλλά δεν τις έχω διαγράψει
+                   μήπως και τις χρειαστούμε ξανά"""
 
                 # προσθήκη νέου χρήστη στήν λίστα.
                 new_user = create_user(users, name, email, password, role)
@@ -68,7 +65,6 @@ def main():
                     write_users("usersDB.txt", users)
                     print("Συγχαρητήρια!\nΝέος χρήστης προστέθηκε με επιτυχία")
             elif sign_in_choice == 'b':
-                print("--Διαθέσιμοι χρήστες--\n")
                 email = input("email: ")
                 password = input("password: ")
 
@@ -135,10 +131,23 @@ def user_menu(current_user, users):
                 print("Λάθος Επιλογή!!")
 
                 continue
-
+            #Όνομα δραστηριότητας
             name= input("'Ονομα δραστηριότητας: ")
+
+            #Διαθέσιμος χρόνος
             time = float(input("Διαθέσιμος χρόνος: "))
+            while time<=0:
+                print("Ο χρόνος πρέπει να είναι μεγαλύτερος του 0!")
+                time = float(input("Διαθέσιμος χρόνος: "))
+
+            #Δήλωση Προτεραιότητας
             priority=int(input("Προτεραιότητα (1-10): "))
+            while priority>1 or priority>10:
+                print("Η προτεραιότητα πρέπει να είναι μεταξύ 1 και 10!")
+                priority = int(input("Προτεραιότητα (1-10): "))
+
+
+
             result=add_activity(current_user, acticity_type, name, time, priority)
 
             if result:
