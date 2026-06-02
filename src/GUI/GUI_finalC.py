@@ -63,17 +63,21 @@ class TimeManagementGUI:
 
     def __init__(self, root):
         self.root = root
-        self.root.title("Project 53 - Εφαρμογή Διαχείρισης Χρόνου Υποχρεώσεων & Ελεύθερου Χρόνου")
+        self.root.title("Project 53 - Εφαρμογή Διαχείρισης Χρόνου")
         self.root.geometry("1100x680")
         self.root.minsize(900, 560)
 
-        # Δεδομένα
         self.users = []
         self.current_user = None
 
         self.load_users()
-        self._build_ui()
-        self.write_result("Καλώς ήρθατε!\n\nΠατήστε «Σύνδεση / Εγγραφή» για να ξεκινήσετε.")
+
+        # Αν δεν υπάρχουν χρήστες, δημιουργία πρώτου Admin
+        if not self.users:
+            self._create_first_admin()
+        else:
+            self._build_ui()
+            self.write_result("Καλώς ήρθατε!\n\nΠατήστε «Σύνδεση / Εγγραφή» για να ξεκινήσετε.")
 
     # ── ΔΕΔΟΜΕΝΑ ──────────────────────────────────────────────────────────────
 
@@ -91,9 +95,15 @@ class TimeManagementGUI:
         with open(DB, "wb") as f:
             pickle.dump(self.users, f)
 
-    def find_user(self, email, pw):
+    def find_user(self, email):
+        return next((u for u in self.users if u["email"] == email), None)
+
+    def authenticate_user(self, email, pw):
         return next((u for u in self.users
                      if u["email"] == email and u["password"] == pw), None)
+
+    def admin_exists(self):
+        return any(u.get("role") == "admin" for u in self.users)
 
     @staticmethod
     def optimal_schedule(user):
@@ -106,6 +116,60 @@ class TimeManagementGUI:
             else:
                 infeasible.append(a)
         return feasible, infeasible, rem
+
+    # ── ΔΗΜΙΟΥΡΓΙΑ ΠΡΩΤΟΥ ADMIN ───────────────────────────────────────────────
+
+    def _create_first_admin(self):
+        """Αν δεν υπάρχουν χρήστες, εμφανίζει φόρμα δημιουργίας πρώτου Admin."""
+        win = tk.Toplevel(self.root)
+        win.title("Δημιουργία Πρώτου Admin")
+        win.resizable(False, False)
+        win.grab_set()
+        win.geometry("380x280")
+        win.update_idletasks()
+        win.geometry(f"+{self.root.winfo_screenwidth()//2 - 190}+{self.root.winfo_screenheight()//2 - 140}")
+
+        tk.Label(win, text="Δεν υπάρχουν χρήστες στο σύστημα.",
+                 font=("Arial", 10)).pack(pady=(16, 4))
+        tk.Label(win, text="Δημιουργία πρώτου Admin:",
+                 font=("Arial", 10, "bold")).pack(pady=(0, 10))
+
+        form = tk.Frame(win, padx=20)
+        form.pack(fill="x")
+
+        fields = [("Όνομα:", False), ("Email:", False),
+                  ("Κωδικός:", True), ("Ώρες/εβδ.:", False)]
+        entries = []
+        for i, (lbl, secret) in enumerate(fields):
+            tk.Label(form, text=lbl).grid(row=i, column=0, sticky="w", pady=4)
+            e = tk.Entry(form, width=28, show="*" if secret else "")
+            e.grid(row=i, column=1, pady=4)
+            entries.append(e)
+
+        def do_create():
+            name, email, pw, h_str = [e.get().strip() for e in entries]
+            if not all([name, email, pw, h_str]):
+                messagebox.showwarning("Προσοχή", "Συμπληρώστε όλα τα πεδία.", parent=win)
+                return
+            try:
+                h = float(h_str)
+                assert h > 0
+            except Exception:
+                messagebox.showerror("Σφάλμα", "Εισάγετε έγκυρο θετικό αριθμό ωρών.", parent=win)
+                return
+            new_u = {"name": name, "email": email, "password": pw,
+                     "hours": h, "activities": [], "role": "admin"}
+            self.users.append(new_u)
+            self.save_users()
+            win.destroy()
+            self._build_ui()
+            self.write_result(f"Ο πρώτος Admin «{name}» δημιουργήθηκε!\n\nΠατήστε «Σύνδεση» για να συνδεθείτε.")
+
+        tk.Button(win, text="Δημιουργία Admin", command=do_create,
+                  width=22).pack(pady=14)
+
+        # Κλείσιμο εφαρμογής αν κλείσει το παράθυρο χωρίς δημιουργία
+        win.protocol("WM_DELETE_WINDOW", self.root.destroy)
 
     # ── UI ────────────────────────────────────────────────────────────────────
 
@@ -131,7 +195,7 @@ class TimeManagementGUI:
         frm_account = tk.LabelFrame(left, text="Λογαριασμός", padx=8, pady=6)
         frm_account.pack(fill="x", pady=(0, 6))
 
-        self.btn_login = tk.Button(frm_account, text="Σύνδεση / Εγγραφή",
+        self.btn_login = tk.Button(frm_account, text="Σύνδεση",
                                    command=self.open_login_window, width=26)
         self.btn_login.pack(pady=2)
 
@@ -190,6 +254,14 @@ class TimeManagementGUI:
                                    command=self.show_chart, width=28, state="disabled")
         self.btn_chart.pack(pady=2)
 
+        # Admin Panel (ορατό μόνο σε admin)
+        self.frm_admin = tk.LabelFrame(left, text="⚙ Admin Panel", padx=8, pady=6)
+        # Δεν κάνουμε pack ακόμα — θα γίνει μόνο αν ο χρήστης είναι admin
+
+        self.btn_admin_users = tk.Button(self.frm_admin, text="Διαχείριση Χρηστών",
+                                         command=self.open_admin_users, width=28)
+        self.btn_admin_users.pack(pady=2)
+
         # Αρχεία
         frm_files = tk.LabelFrame(left, text="Αρχεία", padx=8, pady=6)
         frm_files.pack(fill="x", pady=(0, 6))
@@ -213,7 +285,6 @@ class TimeManagementGUI:
         tk.Button(left, text="Έξοδος", command=root.destroy,
                   bg="salmon", fg="white smoke", width=28).pack(pady=4)
 
-        # Λίστα κουμπιών που χρειάζονται σύνδεση
         self.buttons_need_login = [
             self.btn_add, self.btn_edit, self.btn_del,
             self.btn_stats, self.btn_optimal, self.btn_chart,
@@ -283,8 +354,17 @@ class TimeManagementGUI:
             b.config(state=state)
         self.btn_login.config(state="disabled" if logged_in else "normal")
         self.btn_logout.config(state=state)
+
+        # Admin panel: εμφανίζεται μόνο αν ο συνδεδεμένος είναι admin
+        if logged_in and self.current_user.get("role") == "admin":
+            self.frm_admin.pack(fill="x", pady=(0, 6),
+                                before=self.btn_save_dat.master)
+        else:
+            self.frm_admin.pack_forget()
+
+        role_label = " [Admin]" if (logged_in and self.current_user.get("role") == "admin") else ""
         self.lbl_user.config(
-            text=f"Συνδεδεμένος: {self.current_user['name']}" if logged_in
+            text=f"Συνδεδεμένος: {self.current_user['name']}{role_label}" if logged_in
             else "Μη συνδεδεμένος"
         )
 
@@ -298,90 +378,49 @@ class TimeManagementGUI:
                                  parent=parent)
             return None
 
-    # ── ΣΥΝΔΕΣΗ / ΕΓΓΡΑΦΗ ─────────────────────────────────────────────────────
+    # ── ΣΥΝΔΕΣΗ ───────────────────────────────────────────────────────────────
 
     def open_login_window(self):
         win = tk.Toplevel(self.root)
-        win.title("Σύνδεση / Εγγραφή")
+        win.title("Σύνδεση")
         win.resizable(False, False)
         win.grab_set()
-        win.geometry("370x310")
+        win.geometry("340x200")
         win.update_idletasks()
-        x = self.root.winfo_x() + (self.root.winfo_width()  - 370) // 2
-        y = self.root.winfo_y() + (self.root.winfo_height() - 310) // 2
+        x = self.root.winfo_x() + (self.root.winfo_width()  - 340) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 200) // 2
         win.geometry(f"+{x}+{y}")
 
-        tk.Label(win, text="Σύνδεση / Εγγραφή",
-                 font=("Arial", 11, "bold")).pack(pady=10)
+        tk.Label(win, text="Σύνδεση", font=("Arial", 11, "bold")).pack(pady=12)
 
-        nb = ttk.Notebook(win)
-        nb.pack(fill="both", expand=True, padx=10, pady=4)
+        form = tk.Frame(win, padx=20)
+        form.pack(fill="x")
 
-        # Tab Σύνδεσης
-        tab_l = tk.Frame(nb, padx=16, pady=12)
-        nb.add(tab_l, text="  Σύνδεση  ")
+        tk.Label(form, text="Email:").grid(row=0, column=0, sticky="w", pady=6)
+        e_email = tk.Entry(form, width=28)
+        e_email.grid(row=0, column=1, pady=6)
 
-        tk.Label(tab_l, text="Email:").grid(row=0, column=0, sticky="w", pady=4)
-        e_email = tk.Entry(tab_l, width=28)
-        e_email.grid(row=0, column=1, pady=4)
-
-        tk.Label(tab_l, text="Κωδικός:").grid(row=1, column=0, sticky="w", pady=4)
-        e_pass = tk.Entry(tab_l, width=28, show="*")
-        e_pass.grid(row=1, column=1, pady=4)
+        tk.Label(form, text="Κωδικός:").grid(row=1, column=0, sticky="w", pady=6)
+        e_pass = tk.Entry(form, width=28, show="*")
+        e_pass.grid(row=1, column=1, pady=6)
 
         def do_login():
-            u = self.find_user(e_email.get().strip(), e_pass.get())
+            u = self.authenticate_user(e_email.get().strip(), e_pass.get())
             if u:
                 self.current_user = u
                 win.destroy()
                 self.set_buttons_state(True)
                 self.refresh_tree()
+                role_str = "Admin" if u.get("role") == "admin" else "Χρήστης"
                 self.write_result(
-                    f"Καλώς ήρθατε, {u['name']}!\n"
+                    f"Καλώς ήρθατε, {u['name']}! ({role_str})\n"
                     f"Διαθέσιμες ώρες: {u['hours']}h/εβδ.\n"
                     f"Δραστηριότητες : {len(u['activities'])}")
             else:
                 messagebox.showerror("Σφάλμα", "Λανθασμένο email ή κωδικός.", parent=win)
 
-        tk.Button(tab_l, text="Σύνδεση", command=do_login, width=20).grid(
-            row=2, column=0, columnspan=2, pady=12)
-
-        # Tab Εγγραφής
-        tab_r = tk.Frame(nb, padx=16, pady=12)
-        nb.add(tab_r, text="  Εγγραφή  ")
-
-        labels_r = ["Όνομα:", "Email:", "Κωδικός:", "Ώρες/εβδ.:"]
-        entries_r = []
-        for i, lbl in enumerate(labels_r):
-            tk.Label(tab_r, text=lbl).grid(row=i, column=0, sticky="w", pady=3)
-            e = tk.Entry(tab_r, width=26, show="*" if "Κωδ" in lbl else "")
-            e.grid(row=i, column=1, pady=3)
-            entries_r.append(e)
-
-        def do_register():
-            name, email, pw, h_str = [e.get().strip() for e in entries_r]
-            if not all([name, email, pw, h_str]):
-                messagebox.showwarning("Προσοχή", "Συμπληρώστε όλα τα πεδία.", parent=win)
-                return
-            h = self.validate_hours(h_str, parent=win)
-            if h is None:
-                return
-            if any(u["email"] == email for u in self.users):
-                messagebox.showerror("Σφάλμα", "Το email χρησιμοποιείται ήδη.", parent=win)
-                return
-            new_u = {"name": name, "email": email, "password": pw,
-                     "hours": h, "activities": []}
-            self.users.append(new_u)
-            self.save_users()
-            self.current_user = new_u
-            win.destroy()
-            self.set_buttons_state(True)
-            self.refresh_tree()
-            self.write_result(f"Εγγραφή επιτυχής! Καλώς ήρθατε, {name}!")
-
-        tk.Button(tab_r, text="Δημιουργία Λογαριασμού",
-                  command=do_register, width=24).grid(
-            row=4, column=0, columnspan=2, pady=12)
+        e_pass.bind("<Return>", lambda e: do_login())
+        tk.Button(win, text="Σύνδεση", command=do_login, width=20).pack(pady=12)
 
     def do_logout(self):
         if messagebox.askyesno("Αποσύνδεση", "Αποθήκευση & αποσύνδεση;"):
@@ -390,6 +429,139 @@ class TimeManagementGUI:
         self.set_buttons_state(False)
         self.tree.delete(*self.tree.get_children())
         self.write_result("Αποσυνδεθήκατε.")
+
+    # ── ADMIN: ΔΙΑΧΕΙΡΙΣΗ ΧΡΗΣΤΩΝ ─────────────────────────────────────────────
+
+    def open_admin_users(self):
+        """Παράθυρο Admin για διαχείριση χρηστών (προσθήκη / διαγραφή)."""
+        win = tk.Toplevel(self.root)
+        win.title("Admin — Διαχείριση Χρηστών")
+        win.grab_set()
+        win.geometry("600x440")
+        x = self.root.winfo_x() + (self.root.winfo_width()  - 600) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 440) // 2
+        win.geometry(f"+{x}+{y}")
+
+        tk.Label(win, text="Διαχείριση Χρηστών",
+                 font=("Arial", 11, "bold")).pack(pady=8)
+
+        # Πίνακας χρηστών
+        frm_tbl = tk.Frame(win)
+        frm_tbl.pack(fill="both", expand=True, padx=10)
+
+        cols = ("Όνομα", "Email", "Ρόλος", "Ώρες/εβδ.")
+        utree = ttk.Treeview(frm_tbl, columns=cols, show="headings", height=10)
+        for col in cols:
+            utree.heading(col, text=col)
+        utree.column("Όνομα",    width=140, anchor="w")
+        utree.column("Email",    width=190, anchor="w")
+        utree.column("Ρόλος",   width=80,  anchor="center")
+        utree.column("Ώρες/εβδ.", width=90, anchor="center")
+
+        sb = ttk.Scrollbar(frm_tbl, orient="vertical", command=utree.yview)
+        utree.configure(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
+        utree.pack(fill="both", expand=True)
+
+        def refresh_utree():
+            utree.delete(*utree.get_children())
+            for u in self.users:
+                utree.insert("", "end", values=(
+                    u["name"], u["email"],
+                    u.get("role", "user"), f"{u['hours']}h"))
+
+        refresh_utree()
+
+        # Κουμπιά
+        frm_btns = tk.Frame(win)
+        frm_btns.pack(pady=8)
+
+        def del_user():
+            sel = utree.selection()
+            if not sel:
+                messagebox.showinfo("Πληροφορία", "Επιλέξτε χρήστη.", parent=win)
+                return
+            idx = utree.index(sel[0])
+            u = self.users[idx]
+            if u["email"] == self.current_user["email"]:
+                messagebox.showerror("Σφάλμα", "Δεν μπορείτε να διαγράψετε τον εαυτό σας.", parent=win)
+                return
+            if messagebox.askyesno("Διαγραφή", f"Να διαγραφεί ο χρήστης «{u['name']}»;", parent=win):
+                self.users.pop(idx)
+                self.save_users()
+                refresh_utree()
+
+        tk.Button(frm_btns, text="Προσθήκη Χρήστη",
+                  command=lambda: self._add_user_dialog(win, refresh_utree),
+                  width=20).pack(side="left", padx=6)
+        tk.Button(frm_btns, text="Διαγραφή Επιλεγμένου",
+                  command=del_user, width=20).pack(side="left", padx=6)
+        tk.Button(frm_btns, text="Κλείσιμο",
+                  command=win.destroy, width=14).pack(side="left", padx=6)
+
+    def _add_user_dialog(self, parent, on_success):
+        """Διάλογος προσθήκης νέου χρήστη από Admin."""
+        win = tk.Toplevel(parent)
+        win.title("Προσθήκη Χρήστη")
+        win.resizable(False, False)
+        win.grab_set()
+        win.geometry("360x280")
+        x = parent.winfo_x() + (parent.winfo_width()  - 360) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 280) // 2
+        win.geometry(f"+{x}+{y}")
+
+        tk.Label(win, text="Νέος Χρήστης",
+                 font=("Arial", 10, "bold")).pack(pady=10)
+
+        form = tk.Frame(win, padx=16)
+        form.pack(fill="x")
+
+        fields = [("Όνομα:", False), ("Email:", False),
+                  ("Κωδικός:", True), ("Ώρες/εβδ.:", False)]
+        entries = []
+        for i, (lbl, secret) in enumerate(fields):
+            tk.Label(form, text=lbl).grid(row=i, column=0, sticky="w", pady=4)
+            e = tk.Entry(form, width=26, show="*" if secret else "")
+            e.grid(row=i, column=1, pady=4)
+            entries.append(e)
+
+        tk.Label(form, text="Ρόλος:").grid(row=4, column=0, sticky="w", pady=4)
+        role_var = tk.StringVar(value="user")
+        frm_role = tk.Frame(form)
+        frm_role.grid(row=4, column=1, sticky="w")
+        tk.Radiobutton(frm_role, text="User",  variable=role_var, value="user").pack(side="left")
+        rb_admin = tk.Radiobutton(frm_role, text="Admin", variable=role_var, value="admin")
+        rb_admin.pack(side="left")
+        # Απενεργοποίηση επιλογής Admin αν υπάρχει ήδη
+        if self.admin_exists():
+            rb_admin.config(state="disabled")
+
+        def do_add():
+            name, email, pw, h_str = [e.get().strip() for e in entries]
+            if not all([name, email, pw, h_str]):
+                messagebox.showwarning("Προσοχή", "Συμπληρώστε όλα τα πεδία.", parent=win)
+                return
+            if self.find_user(email):
+                messagebox.showerror("Σφάλμα", "Το email χρησιμοποιείται ήδη.", parent=win)
+                return
+            h = self.validate_hours(h_str, parent=win)
+            if h is None:
+                return
+            role = role_var.get()
+            if role == "admin" and self.admin_exists():
+                messagebox.showerror("Σφάλμα", "Αδυναμία δημιουργίας 2ου Admin.", parent=win)
+                return
+            new_u = {"name": name, "email": email, "password": pw,
+                     "hours": h, "activities": [], "role": role}
+            self.users.append(new_u)
+            self.save_users()
+            win.destroy()
+            on_success()
+            messagebox.showinfo("Επιτυχία",
+                                f"Ο χρήστης «{name}» ({role}) δημιουργήθηκε!",
+                                parent=parent)
+
+        tk.Button(win, text="Δημιουργία", command=do_add, width=18).pack(pady=10)
 
     # ── ΔΡΑΣΤΗΡΙΟΤΗΤΕΣ ────────────────────────────────────────────────────────
 
@@ -459,8 +631,7 @@ class TimeManagementGUI:
         tk.Label(form, text="Κατηγορία:").grid(row=1, column=0, sticky="w", pady=4)
         v_cat = tk.StringVar(value=act["category"])
         ttk.Combobox(form, textvariable=v_cat, state="readonly", width=23,
-                     values=["Υποχρέωση", "Ελεύθερος Χρόνος"]).grid(
-            row=1, column=1, pady=4)
+                     values=["Υποχρέωση", "Ελεύθερος Χρόνος"]).grid(row=1, column=1, pady=4)
 
         tk.Label(form, text="Ώρες/εβδ.:").grid(row=2, column=0, sticky="w", pady=4)
         e_hours = tk.Entry(form, width=26)
@@ -490,8 +661,8 @@ class TimeManagementGUI:
 
         bf = tk.Frame(win)
         bf.pack(pady=10)
-        tk.Button(bf, text="Αποθήκευση", command=save_edit,  width=14).pack(side="left", padx=6)
-        tk.Button(bf, text="Ακύρωση",    command=win.destroy, width=14).pack(side="left", padx=6)
+        tk.Button(bf, text="Αποθήκευση", command=save_edit,   width=14).pack(side="left", padx=6)
+        tk.Button(bf, text="Ακύρωση",    command=win.destroy,  width=14).pack(side="left", padx=6)
 
     # ── ΑΠΟΤΕΛΕΣΜΑΤΑ ──────────────────────────────────────────────────────────
 
@@ -521,20 +692,21 @@ class TimeManagementGUI:
     def show_statistics(self):
         if not self.current_user:
             return
-        acts   = self.current_user["activities"]
-        tasks  = [a for a in acts if a["category"] == "Υποχρέωση"]
+        acts    = self.current_user["activities"]
+        tasks   = [a for a in acts if a["category"] == "Υποχρέωση"]
         hobbies = [a for a in acts if a["category"] == "Ελεύθερος Χρόνος"]
 
-        t_tot  = sum(a["time"] for a in tasks)
-        h_tot  = sum(a["time"] for a in hobbies)
-        t_avg  = t_tot / len(tasks)   if tasks   else 0.0
-        h_avg  = h_tot / len(hobbies) if hobbies else 0.0
-        total  = t_tot + h_tot
-        diff   = self.current_user["hours"] - total
+        t_tot = sum(a["time"] for a in tasks)
+        h_tot = sum(a["time"] for a in hobbies)
+        t_avg = t_tot / len(tasks)   if tasks   else 0.0
+        h_avg = h_tot / len(hobbies) if hobbies else 0.0
+        total = t_tot + h_tot
+        diff  = self.current_user["hours"] - total
 
         lines = [
             "=== ΣΤΑΤΙΣΤΙΚΑ ===\n",
             f"Χρήστης         : {self.current_user['name']}",
+            f"Ρόλος           : {self.current_user.get('role', 'user')}",
             f"Διαθ. ώρες      : {self.current_user['hours']:.1f}h/εβδ.\n",
             "-- Υποχρεώσεις --",
             f"  Πλήθος        : {len(tasks)}",
