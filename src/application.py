@@ -23,7 +23,7 @@ def main():
 
     while True:
         print("\n=== MENOY ΔΙΑΧΕΙΡΙΣΗΣ ΧΡΟΝΟΥ ===")
-        print("1. Διαχείριση Χρηστών")
+        print("1. Σύνδεση")
         print("2. Εκτύπωση Δεδομένων")
         print("3. Exit")
 
