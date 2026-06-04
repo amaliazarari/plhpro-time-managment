@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "GUI"))
+from GUI.GUI_finalC import main
 from methods.fileMethods import *
 from services.authUser import (find_user, create_user, authenticate_user, delete_user, admin_exists)
 from services.activityService import (add_activity, remove_activity, edit_activity, list_activities)
@@ -475,4 +478,4 @@ def user_menu(current_user, users):
 
 
 if __name__ == "__main__":
-    main() # --- Κύριο Μενού ---
+    main()
