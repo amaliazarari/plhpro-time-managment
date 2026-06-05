@@ -14,15 +14,3 @@ def read_users(file_name):
 
     except (FileNotFoundError,EOFError):
         return []
-
-
-    # def read_users(file_name):
-    #      try:
-    #          with open(file_name , "rb") as f:
-    #              data = f.read()
-    #              if not data: #εδώ προσθέσα μια συνθήκη εαν το αρχείο είναι άδειο
-    #                  return []
-    #              users = pkl.loads(f.read())
-    #          return users
-    #      except (FileNotFoundError, EOFError):
-    #          return []
