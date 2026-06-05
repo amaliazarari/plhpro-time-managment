@@ -98,7 +98,3 @@ def list_activities(user):
     total_hobbies = sum(hobbie.time for hobbie in user.hobbies)
     print(f"\n Συνολικές ώρες υποχρεώσεων: {total_tasks}h")
     print(f"\n Συνολικές ώρες δραστηριοτήτων: {total_hobbies}h")
-
-
-
-

@@ -22,10 +22,8 @@ class Activity:
 class Hobbie(Activity):
     def __init__(self, time, priority, name):
         super().__init__(time, priority, name)
-        self.mandatory = False
 
 class Task(Activity):
     def __init__(self, time, priority, name):
         super().__init__(time, priority, name)
-        self.mandatory = True
 
