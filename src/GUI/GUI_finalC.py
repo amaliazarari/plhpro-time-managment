@@ -289,7 +289,7 @@ class TimeManagementGUI:
         # Admin panel: εμφανίζεται μόνο αν ο συνδεδεμένος είναι admin
         if logged_in and self.current_user.get("role") == "admin":
             self.frm_admin.pack(fill="x", pady=(0, 6),
-                                before=self.btn_save_dat.master)
+                                before=self.btn_exp_dat.master)
         else:
             self.frm_admin.pack_forget()
 
