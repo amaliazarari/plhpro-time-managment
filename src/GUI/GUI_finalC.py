@@ -1,10 +1,12 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-import os, pickle
+from models.user import User
+from methods.fileMethods import read_users, write_users
+from services.authUser import find_user, authenticate_user, admin_exists, create_user, delete_user
 
 
-DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usersDB.dat")
-
+#Path του αρχείου δεδομένων
+DB= "usersDB.txt"
 
 class TimeManagementGUI:
 
@@ -29,28 +31,19 @@ class TimeManagementGUI:
     # ── ΔΕΔΟΜΕΝΑ ──────────────────────────────────────────────────────────────
 
     def load_users(self):
-        if not os.path.exists(DB):
-            self.users = []
-            return
-        try:
-            with open(DB, "rb") as f:
-                self.users = pickle.load(f)
-        except Exception:
-            self.users = []
+        self.users = read_users(DB) #διαβάζει το αρχείο data/usersDB.txt και φορτώνει τους χρήστες
 
     def save_users(self):
-        with open(DB, "wb") as f:
-            pickle.dump(self.users, f)
+        write_users(DB, self.users)
 
     def find_user(self, email):
-        return next((u for u in self.users if u["email"] == email), None)
+        return find_user(self.users, email)
 
     def authenticate_user(self, email, pw):
-        return next((u for u in self.users
-                     if u["email"] == email and u["password"] == pw), None)
+        return authenticate_user(self.users, email, pw)
 
     def admin_exists(self):
-        return any(u.get("role") == "admin" for u in self.users)
+        return admin_exists(self.users)
 
     @staticmethod
     def optimal_schedule(user):
@@ -104,8 +97,7 @@ class TimeManagementGUI:
             except Exception:
                 messagebox.showerror("Σφάλμα", "Εισάγετε έγκυρο θετικό αριθμό ωρών.", parent=win)
                 return
-            new_u = {"name": name, "email": email, "password": pw,
-                     "hours": h, "activities": [], "role": "admin"}
+            new_u = User(name, email, pw, "admin", h)
             self.users.append(new_u)
             self.save_users()
             win.destroy()
@@ -213,19 +205,11 @@ class TimeManagementGUI:
         frm_files = tk.LabelFrame(left, text="Αρχεία", padx=8, pady=6)
         frm_files.pack(fill="x", pady=(0, 6))
 
-        self.btn_save_dat = tk.Button(frm_files, text="Αποθήκευση δεδομένων (.dat)",
-                                      command=self.save_data, width=28, state="disabled")
-        self.btn_save_dat.pack(pady=2)
-
-        self.btn_load_dat = tk.Button(frm_files, text="Φόρτωση δεδομένων (.dat)",
-                                      command=self.load_data, width=28, state="disabled")
-        self.btn_load_dat.pack(pady=2)
-
-        self.btn_exp_dat = tk.Button(frm_files, text="Εξαγωγή δεδομένων (.dat)",
+        self.btn_exp_dat = tk.Button(frm_files, text="Εξαγωγή δεδομένων (.txt)",
                                      command=self.export_dat, width=28, state="disabled")
         self.btn_exp_dat.pack(pady=2)
 
-        self.btn_imp_dat = tk.Button(frm_files, text="Εισαγωγή δεδομένων (.dat)",
+        self.btn_imp_dat = tk.Button(frm_files, text="Εισαγωγή δεδομένων (.txt)",
                                      command=self.import_dat, width=28, state="disabled")
         self.btn_imp_dat.pack(pady=2)
 
@@ -235,7 +219,7 @@ class TimeManagementGUI:
         self.buttons_need_login = [
             self.btn_add, self.btn_edit, self.btn_del,
             self.btn_stats, self.btn_optimal, self.btn_chart,
-            self.btn_save_dat, self.btn_load_dat,
+            #self.btn_save_dat, self.btn_load_dat,
             self.btn_exp_dat, self.btn_imp_dat,
         ]
 
@@ -305,7 +289,7 @@ class TimeManagementGUI:
         # Admin panel: εμφανίζεται μόνο αν ο συνδεδεμένος είναι admin
         if logged_in and self.current_user.get("role") == "admin":
             self.frm_admin.pack(fill="x", pady=(0, 6),
-                                before=self.btn_save_dat.master)
+                                before=self.btn_exp_dat.master)
         else:
             self.frm_admin.pack_forget()
 
@@ -423,6 +407,7 @@ class TimeManagementGUI:
         frm_btns = tk.Frame(win)
         frm_btns.pack(pady=8)
 
+        """Διαγραφή Χρήστη"""
         def del_user():
             sel = utree.selection()
             if not sel:
@@ -434,7 +419,7 @@ class TimeManagementGUI:
                 messagebox.showerror("Σφάλμα", "Δεν μπορείτε να διαγράψετε τον εαυτό σας.", parent=win)
                 return
             if messagebox.askyesno("Διαγραφή", f"Να διαγραφεί ο χρήστης «{u['name']}»;", parent=win):
-                self.users.pop(idx)
+                delete_user(self.users, u["email"])
                 self.save_users()
                 refresh_utree()
 
@@ -446,6 +431,7 @@ class TimeManagementGUI:
         tk.Button(frm_btns, text="Κλείσιμο",
                   command=win.destroy, width=14).pack(side="left", padx=6)
 
+    """Προσθήκη χρήστη"""
     def _add_user_dialog(self, parent, on_success):
         """Διάλογος προσθήκης νέου χρήστη από Admin."""
         win = tk.Toplevel(parent)
@@ -498,9 +484,7 @@ class TimeManagementGUI:
             if role == "admin" and self.admin_exists():
                 messagebox.showerror("Σφάλμα", "Αδυναμία δημιουργίας 2ου Admin.", parent=win)
                 return
-            new_u = {"name": name, "email": email, "password": pw,
-                     "hours": h, "activities": [], "role": role}
-            self.users.append(new_u)
+            create_user(self.users, name, email, pw, role, h)
             self.save_users()
             win.destroy()
             on_success()
@@ -703,70 +687,32 @@ class TimeManagementGUI:
 
     # ── ΑΡΧΕΙΑ ────────────────────────────────────────────────────────────────
 
-    def save_data(self):
-        if not self.current_user:
-            return
-        path = filedialog.asksaveasfilename(
-            title="Αποθήκευση δεδομένων",
-            defaultextension=".dat",
-            filetypes=[("Data files", "*.dat"), ("Όλα", "*.*")],
-            initialfile=f"{self.current_user['name']}_data.dat")
-        if path:
-            data = {"activities": self.current_user["activities"],
-                    "available_hours": self.current_user["hours"]}
-            with open(path, "wb") as f:
-                pickle.dump(data, f)
-            messagebox.showinfo("Επιτυχία", "Δεδομένα αποθηκεύτηκαν.")
-            self.write_result(f"Αποθηκεύτηκε: {path}")
-
-    def load_data(self):
-        if not self.current_user:
-            return
-        path = filedialog.askopenfilename(
-            title="Φόρτωση δεδομένων",
-            filetypes=[("Data files", "*.dat"), ("Όλα", "*.*")])
-        if not path:
-            return
-        try:
-            with open(path, "rb") as f:
-                data = pickle.load(f)
-            if messagebox.askyesno("Επιβεβαίωση", "Αντικατάσταση τρεχόντων δεδομένων;"):
-                self.current_user["activities"] = data.get("activities", [])
-                self.current_user["hours"]      = data.get("available_hours",
-                                                           self.current_user["hours"])
-                self.save_users()
-                self.refresh_tree()
-                self.write_result("Φόρτωση δεδομένων επιτυχής.")
-        except Exception as e:
-            messagebox.showerror("Σφάλμα", f"Αδυναμία φόρτωσης:\n{e}")
-
     def export_dat(self):
         if not self.current_user:
             return
         path = filedialog.asksaveasfilename(
             title="Εξαγωγή δεδομένων",
-            defaultextension=".dat",
-            filetypes=[("Data files", "*.dat"), ("Όλα", "*.*")],
-            initialfile=f"{self.current_user['name']}_data.dat")
+            defaultextension=".txt",
+            filetypes=[("Data files", "*.txt"), ("Όλα", "*.*")],
+            initialfile=f"{self.current_user['name']}_data.txt")
         if path:
-            with open(path, "wb") as f:
-                pickle.dump(self.current_user, f)
+            write_users(path, [self.current_user])
             messagebox.showinfo("Επιτυχία", f"Εξαγωγή:\n{path}")
+            self.write_result("Εξαγωγή δεδομένων επιτυχής!")
 
     def import_dat(self):
         if not self.current_user:
             return
         path = filedialog.askopenfilename(
             title="Εισαγωγή δεδομένων",
-            filetypes=[("Data files", "*.dat"), ("Όλα", "*.*")])
+            filetypes=[("Data files", "*.txt"), ("Όλα", "*.*")])
         if not path:
             return
         try:
-            with open(path, "rb") as f:
-                data = pickle.load(f)
+            data = read_users(path)
             if messagebox.askyesno("Επιβεβαίωση", "Αντικατάσταση τρεχόντων δεδομένων;"):
-                self.current_user["activities"] = data.get("activities", [])
-                self.current_user["hours"]      = data.get("hours", self.current_user["hours"])
+                self.current_user["activities"] = data[0]["activities"]
+                self.current_user["hours"]      = data[0]["hours"]
                 self.save_users()
                 self.refresh_tree()
                 self.write_result("Εισαγωγή δεδομένων επιτυχής.")

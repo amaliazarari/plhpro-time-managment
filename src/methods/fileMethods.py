@@ -2,7 +2,7 @@ import pickle as pkl
 
 def write_users(file_name, users):
     with open(file_name, "wb" ) as f:
-        f.write(pkl.dumps(users))
+        pkl.dump(users, f)
 
 #-----TEST READ FILE-----
 def read_users(file_name):

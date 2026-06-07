@@ -24,13 +24,13 @@ def authenticate_user(users, email, password):
     return None
 
 
-def create_user(users, name, email, password, role):
+def create_user(users, name, email, password, role, hours):
     existing_user = find_user(users, email)
 
     if existing_user is not None:
         return None
 
-    new_user = User(name, email, password, role)
+    new_user = User(name, email, password, role, hours)
 
     users.append(new_user)
     return new_user
