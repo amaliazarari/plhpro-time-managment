@@ -1,13 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-#Δεν χρειάζεται να γράφουμε σε συγκεκριμένο path γιατί έχουμε το fileMethods για αυτό. --(import os, pickle)
 from models.user import User
 from methods.fileMethods import read_users, write_users
 from services.authUser import find_user, authenticate_user, admin_exists, create_user, delete_user
 
 
-
-#Δεν χρειαζόμαστε αρχείο .dat αφού έχουμε κάνει .txt --(DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usersDB.dat")
+#Path του αρχείου δεδομένων
 DB= "usersDB.txt"
 
 class TimeManagementGUI:
@@ -207,22 +205,10 @@ class TimeManagementGUI:
         frm_files = tk.LabelFrame(left, text="Αρχεία", padx=8, pady=6)
         frm_files.pack(fill="x", pady=(0, 6))
 
-        #self.btn_save_dat = tk.Button(frm_files, text="Αποθήκευση δεδομένων (.dat)",
-        self.btn_save_dat = tk.Button(frm_files, text="Αποθήκευση δεδομένων (.txt)",
-                                      command=self.save_data, width=28, state="disabled")
-        self.btn_save_dat.pack(pady=2)
-
-        #self.btn_load_dat = tk.Button(frm_files, text="Φόρτωση δεδομένων (.dat)",
-        self.btn_load_dat = tk.Button(frm_files, text="Φόρτωση δεδομένων (.txt)",
-                                      command=self.load_data, width=28, state="disabled")
-        self.btn_load_dat.pack(pady=2)
-
-        #self.btn_exp_dat = tk.Button(frm_files, text="Εξαγωγή δεδομένων (.dat)",
         self.btn_exp_dat = tk.Button(frm_files, text="Εξαγωγή δεδομένων (.txt)",
                                      command=self.export_dat, width=28, state="disabled")
         self.btn_exp_dat.pack(pady=2)
 
-        #self.btn_imp_dat = tk.Button(frm_files, text="Εισαγωγή δεδομένων (.dat)",
         self.btn_imp_dat = tk.Button(frm_files, text="Εισαγωγή δεδομένων (.txt)",
                                      command=self.import_dat, width=28, state="disabled")
         self.btn_imp_dat.pack(pady=2)
@@ -233,7 +219,7 @@ class TimeManagementGUI:
         self.buttons_need_login = [
             self.btn_add, self.btn_edit, self.btn_del,
             self.btn_stats, self.btn_optimal, self.btn_chart,
-            self.btn_save_dat, self.btn_load_dat,
+            #self.btn_save_dat, self.btn_load_dat,
             self.btn_exp_dat, self.btn_imp_dat,
         ]
 
@@ -701,80 +687,30 @@ class TimeManagementGUI:
 
     # ── ΑΡΧΕΙΑ ────────────────────────────────────────────────────────────────
 
-    def save_data(self):
-        if not self.current_user:
-            return
-        path = filedialog.asksaveasfilename(
-            title="Αποθήκευση δεδομένων",
-            #defaultextension=".dat",
-            defaultextension=".txt",
-            #filetypes=[("Data files", "*.dat"), ("Όλα", "*.*")],
-            filetypes=[("Data files", "*.txt"), ("Όλα", "*.*")],
-            initialfile=f"{self.current_user['name']}_data.txt")
-        if path:
-            #data = {"activities": self.current_user["activities"],
-            #        "available_hours": self.current_user["hours"]}
-            #with open(path, "wb") as f:
-            #    pickle.dump(data, f)
-            write_users(path, [self.current_user])
-            messagebox.showinfo("Επιτυχία", "Δεδομένα αποθηκεύτηκαν.")
-            self.write_result(f"Αποθηκεύτηκε: {path}")
-
-    def load_data(self):
-        if not self.current_user:
-            return
-        path = filedialog.askopenfilename(
-            title="Φόρτωση δεδομένων",
-            #filetypes=[("Data files", "*.dat"), ("Όλα", "*.*")])
-            filetypes=[("Data files", "*.txt"), ("Όλα", "*.*")])
-        if not path:
-            return
-        try:
-            #with open(path, "rb") as f:
-            #    data = pickle.load(f)
-            data = read_users(path)
-            if messagebox.askyesno("Επιβεβαίωση", "Αντικατάσταση τρεχόντων δεδομένων;"):
-                self.current_user["activities"] = data[0]("activities")
-                self.current_user["hours"]      = data[0]("hours")
-                self.save_users()
-                self.refresh_tree()
-                self.write_result("Φόρτωση δεδομένων επιτυχής.")
-        except Exception as e:
-            messagebox.showerror("Σφάλμα", f"Αδυναμία φόρτωσης:\n{e}")
-
     def export_dat(self):
         if not self.current_user:
             return
         path = filedialog.asksaveasfilename(
             title="Εξαγωγή δεδομένων",
-            #defaultextension=".dat",
             defaultextension=".txt",
-            #filetypes=[("Data files", "*.dat"), ("Όλα", "*.*")],
-            #initialfile=f"{self.current_user['name']}_data.dat")
             filetypes=[("Data files", "*.txt"), ("Όλα", "*.*")],
             initialfile=f"{self.current_user['name']}_data.txt")
         if path:
-            #with open(path, "wb") as f:
-            #    pickle.dump(self.current_user, f)
             write_users(path, [self.current_user])
             messagebox.showinfo("Επιτυχία", f"Εξαγωγή:\n{path}")
+            self.write_result("Εξαγωγή δεδομένων επιτυχής!")
 
     def import_dat(self):
         if not self.current_user:
             return
         path = filedialog.askopenfilename(
             title="Εισαγωγή δεδομένων",
-            #filetypes=[("Data files", "*.dat"), ("Όλα", "*.*")])
             filetypes=[("Data files", "*.txt"), ("Όλα", "*.*")])
         if not path:
             return
         try:
-            #with open(path, "rb") as f:
-            #    data = pickle.load(f)
             data = read_users(path)
             if messagebox.askyesno("Επιβεβαίωση", "Αντικατάσταση τρεχόντων δεδομένων;"):
-                #self.current_user["activities"] = data.get("activities", [])
-                #self.current_user["hours"]      = data.get("hours", self.current_user["hours"])
                 self.current_user["activities"] = data[0]["activities"]
                 self.current_user["hours"]      = data[0]["hours"]
                 self.save_users()
